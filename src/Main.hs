@@ -2,6 +2,7 @@ module Main where
 
 import Parser
 import CodeWriter
+import Model
 
 -- ============= --
 -- VM Translator --
