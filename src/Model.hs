@@ -7,6 +7,7 @@ module Model where
 data Direction =
     PUSH
   | POP
+  deriving (Eq, Show)
 
 data Segment =
     ARGUMENT
@@ -17,20 +18,23 @@ data Segment =
   | THAT
   | POINTER
   | TEMP
+  deriving (Eq, Show)
 
 type Index = Integer
 
 data MemoryAccessCommand =
-    Direction Segment Index
+    MemCMD Direction Segment Index
+    deriving (Eq, Show)
 
 data ArithLogicCommand =
     ADD 
   | SUB
   | NEG
-  | EQ
-  | GT
-  | LT
+  | EQ_VM
+  | GT_VM
+  | LT_VM
   | AND
   | OR
   | NOT
+  deriving (Eq, Show)
  
