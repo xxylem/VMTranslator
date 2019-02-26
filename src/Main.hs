@@ -1,5 +1,13 @@
 module Main where
 
+import Parser
+import CodeWriter
+
+-- ============= --
+-- VM Translator --
+-- The VM translator will take as input one .vm file or multiple .vm files in a directory and output
+-- a single .asm file.
+
 -- The language consists of four types of
 --     commands:
 --     Arithmetic commands perform arithmetic and logical operations on the stack.
@@ -44,6 +52,12 @@ not   y ---> Not y Bit-wise -}
 -- TODO create data structure for these arithmetic/logic commands
 --    vm stack commands will be parsed into this data format
 --      then they can later be output to approp. assembly code
+
+-- TODO data structure needs to remember originating file, if there is more than one file
+
+-- TODO: Stage 1:
+-- Stack arithmetic commands. Implement the nine stack arithmetic and logical commands, as
+-- well as push constant x.
 
 
 
