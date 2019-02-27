@@ -6,6 +6,7 @@ import Model
 
 import Control.Applicative ((<|>))
 import Data.Attoparsec.ByteString.Char8
+import qualified Data.ByteString.Char8 as BS
 
 -- ====== --
 -- Parser --
@@ -49,3 +50,12 @@ parseArithLogicCMD =
     <|> (string "and" >> return AND)
     <|> (string "or"  >> return OR)
     <|> (string "not" >> return NOT)
+
+type ErrorMsg = String
+
+data ParseError =
+    InvalidLine ErrorMsg
+    deriving (Eq, Show)
+
+parseVMLines :: [BS.ByteString] -> Either ParseError Program
+parseVMLines = undefined

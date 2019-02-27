@@ -4,6 +4,9 @@ import Parser
 import CodeWriter
 import Model
 
+import qualified Data.ByteString.Char8 as BS
+import System.FilePath (dropExtension)
+
 -- ============= --
 -- VM Translator --
 -- The VM translator will take as input one .vm file or multiple .vm files in a directory and output
@@ -61,9 +64,20 @@ not   y ---> Not y Bit-wise -}
 -- well as push constant x.
 
 
+writeProgramToFile :: FilePath -> Program -> IO ()
+writeProgramToFile fp program = undefined --TODO
 
 main :: IO ()
 main = putStrLn "Hello, Haskell!"
+
+handleSingleFile :: FilePath -> IO ()
+handleSingleFile fp = do
+    file <- BS.readFile fp
+    case parseVMLines $ BS.lines file of
+        Right program -> writeProgramToFile (changeExt fp) $! program
+                where changeExt fp = dropExtension fp ++ ".asm"
+        Left err -> putStrLn ("Parse error: "
+                                <> show err)
 
 
 {- 

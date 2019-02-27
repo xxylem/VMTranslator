@@ -38,3 +38,8 @@ data ArithLogicCommand =
   | NOT
   deriving (Eq, Show)
  
+data VMLine =
+    ArithLogicCommand
+  | MemoryAccessCommand -- todo fix
+
+type Program = [VMLine]
