@@ -27,5 +27,6 @@ executable VMTranslator
                      , bytestring >= 0.10.8.2 && < 1.0
                      , filepath >= 1.4 && < 2.0
                      , bytestring-conversion >= 0.2 && < 1.0
+                     , ReadArgs >= 1.2.3 && < 2.0
   hs-source-dirs:      src
   default-language:    Haskell2010

@@ -30,8 +30,8 @@ parseSegment =
     <|> (string "pointer"  >> return POINTER)
     <|> (string "temp"     >> return TEMP)
 
-parseMemoryAccessCommand :: Parser MemoryAccessCommand
-parseMemoryAccessCommand = do
+parseMemoryAccessCMD :: Parser MemoryAccessCommand
+parseMemoryAccessCMD = do
     direction <- parseDirection
     skipMany1 (char ' ')
     segment   <- parseSegment
@@ -56,5 +56,28 @@ type ErrorMsg = String
 newtype ParseError = InvalidLine ErrorMsg
                     deriving (Eq, Show)
 
+parseComment :: Parser ()
+parseComment =
+        skipSpace 
+    >>  (   (string "//" >> return ())
+        <|> endOfInput
+        )
+
+
+removeCommentsAndEmptyLines :: [BS.ByteString] 
+                            -> [BS.ByteString]
+removeCommentsAndEmptyLines = filter (not . runParseIsEmptyLineOrComment)
+            where runParseIsEmptyLineOrComment l =
+                    case parseOnly parseComment l of
+                        (Right _) -> True
+                        (Left _)  -> False
+
 parseVMLines :: [BS.ByteString] -> Either ParseError Program
-parseVMLines = undefined
+parseVMLines ls = go $ removeCommentsAndEmptyLines ls where
+        go []     = Right []
+        go (l:ls) =
+            case parseOnly parseArithLogicCMD l of
+                (Right cmd) -> (:) <$> Right (AL_VM cmd) <*> parseVMLines ls
+                (Left _)    -> case parseOnly parseMemoryAccessCMD l of
+                    (Right cmd) -> (:) <$> Right (M_VM cmd) <*> parseVMLines ls
+                    (Left err)  -> Left $ InvalidLine err

@@ -1,4 +1,4 @@
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE OverloadedStrings, ScopedTypeVariables #-}
 
 module Main where
 
@@ -7,6 +7,7 @@ import CodeWriter
 import Model
 
 import qualified Data.ByteString.Char8 as BS
+import ReadArgs (readArgs)
 import System.FilePath (dropExtension)
 import System.IO
 
@@ -54,7 +55,9 @@ writeProgramToFile fp program =
                         >>  writeProgram h ls sts'
 
 main :: IO ()
-main = putStrLn "Hello, Haskell!"
+main = do
+    (path :: FilePath) <- readArgs
+    handleSingleFile path
 
 handleSingleFile :: FilePath -> IO ()
 handleSingleFile fp = do

@@ -74,35 +74,33 @@ instance ToASMCode ArithLogicCommand where
     (sts,
         "    //add\n"
     <>  "    @SP\n"
+    <>  "    M=M-1\n"
     <>  "    A=M\n"
     <>  "    D=M\n"
     <>  "    A=A-1\n"
-    <>  "    M=M+D\n"
-    <>  "    @SP\n"
-    <>  "    M=M-1\n")
+    <>  "    M=M+D\n")
 
   toASM SUB sts =
     (sts,
         "    //sub\n"
     <>  "    @SP\n"
+    <>  "    M=M-1\n"
     <>  "    A=M\n"
     <>  "    D=M\n"
     <>  "    A=A-1\n"
-    <>  "    M=M-D\n"
-    <>  "    @SP\n"
-    <>  "    M=M-1\n")
+    <>  "    M=M-D\n")
 
   toASM NEG sts =
     (sts, 
         "    //neg\n"
     <>  "    @SP\n"
-    <>  "    A=M\n"
+    <>  "    A=M-1\n"
     <>  "    M=-M\n")
 
   toASM EQ_VM (LS e g l) =
     (LS (e+1) g l,
       let trueJmp = "TRUE_EQ_" <> toByteString' e
-          endJmp  = "END_EQ_"  <> toByteString' e in
+          endJmp  = "END_EQ_"  <> toByteString' e in --TODO fix SP refs from here down
             "    //eq\n"
         <>  "    @SP\n"
         <>  "    A=M\n"
