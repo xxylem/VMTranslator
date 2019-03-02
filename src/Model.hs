@@ -128,7 +128,7 @@ instance ToASMCode ArithLogicCommand where
     (LS e (g+1) l,
       let trueJmp = "TRUE_GT_" <> toByteString' g
           endJmp  = "END_GT_"  <> toByteString' g in
-            "    //eq\n"
+            "    //gt\n"
         <>  "    @SP\n"
         <>  "    A=M\n"
         <>  "    D=M\n"
@@ -153,7 +153,7 @@ instance ToASMCode ArithLogicCommand where
     (LS e g (l+1),
       let trueJmp = "TRUE_LT_" <> toByteString' l
           endJmp  = "END_LT_"  <> toByteString' l in
-            "    //eq\n"
+            "    //lt\n"
         <>  "    @SP\n"
         <>  "    A=M\n"
         <>  "    D=M\n"
@@ -176,36 +176,41 @@ instance ToASMCode ArithLogicCommand where
 
   toASM AND sts =
     (sts,
-        "//and\n"
-    <>  "@SP\n"
-    <>  "A=M\n"
-    <>  "D=M\n"
-    <>  "A=A-1\n"
-    <>  "M=D&M\n"
-    <>  "@SP\n"
-    <>  "M=M-1\n")
+        "    //and\n"
+    <>  "    @SP\n"
+    <>  "    A=M\n"
+    <>  "    D=M\n"
+    <>  "    A=A-1\n"
+    <>  "    M=D&M\n"
+    <>  "    @SP\n"
+    <>  "    M=M-1\n")
 
   toASM OR sts =
     (sts,
-        "//or\n"
-    <>  "@SP\n"
-    <>  "A=M\n"
-    <>  "D=M\n"
-    <>  "A=A-1\n"
-    <>  "M=D|M\n"
-    <>  "@SP\n"
-    <>  "M=M-1\n")
+        "    //or\n"
+    <>  "    @SP\n"
+    <>  "    A=M\n"
+    <>  "    D=M\n"
+    <>  "    A=A-1\n"
+    <>  "    M=D|M\n"
+    <>  "    @SP\n"
+    <>  "    M=M-1\n")
 
   toASM NOT sts =
     (sts,
-        "//not\n"
-    <>  "@SP\n"
-    <>  "A=M\n"
-    <>  "M=!M\n")
+        "    //not\n"
+    <>  "    @SP\n"
+    <>  "    A=M\n"
+    <>  "    M=!M\n")
 
  
 data VMLine =
-    ArithLogicCommand
-  | MemoryAccessCommand -- todo fix
+    AL_VM ArithLogicCommand
+  | M_VM  MemoryAccessCommand
+  deriving (Eq, Show)
+
+instance ToASMCode VMLine where
+  toASM (AL_VM c) = toASM c
+  toASM (M_VM  c) = toASM c
 
 type Program = [VMLine]

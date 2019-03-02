@@ -1,3 +1,5 @@
+{-# LANGUAGE OverloadedStrings #-}
+
 module Main where
 
 import Parser
@@ -6,6 +8,7 @@ import Model
 
 import qualified Data.ByteString.Char8 as BS
 import System.FilePath (dropExtension)
+import System.IO
 
 -- ============= --
 -- VM Translator --
@@ -34,38 +37,21 @@ at the end of any line and are ignored. Blank lines are permitted and ignored. -
 --  command arg
 --  command arg1 arg2
 
---   parts separated by arbitary number of spaces
-
---    // comments
---   blank lines ignored
-
-{- 
-Command
-Return value (after
-popping the operand/s) Comment
-add x y ---> x + y Integer addition (2’s complement)
-sub x y ---> x - y Integer subtraction (2’s complement)
-neg y   ---> -y Arithmetic negation (2’s complement)
-eq  x y ---> true if x = y, else false Equality
-gt  x y ---> true if x > y, else false Greater than
-lt  x y ---> true if x < y, else false Less than
-and x y ---> x And y Bit-wise
-or  x y ---> x Or y Bit-wise
-not   y ---> Not y Bit-wise -}
-
--- TODO create data structure for these arithmetic/logic commands
---    vm stack commands will be parsed into this data format
---      then they can later be output to approp. assembly code
-
 -- TODO data structure needs to remember originating file, if there is more than one file
 
--- TODO: Stage 1:
--- Stack arithmetic commands. Implement the nine stack arithmetic and logical commands, as
--- well as push constant x.
 
+initState :: LabelStates
+initState = LS 0 0 0
 
 writeProgramToFile :: FilePath -> Program -> IO ()
-writeProgramToFile fp program = undefined --TODO
+writeProgramToFile fp program =
+    withFile fp WriteMode (\h -> writeProgram h program initState)
+                where writeProgram _ [] _       = return ()
+                      writeProgram h (l:ls) sts = 
+                        let (sts', code) = toASM l sts in
+                            BS.hPutStr h code
+                        >>  BS.hPutStr h "\n"
+                        >>  writeProgram h ls sts'
 
 main :: IO ()
 main = putStrLn "Hello, Haskell!"
