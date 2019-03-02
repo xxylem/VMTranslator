@@ -100,25 +100,24 @@ instance ToASMCode ArithLogicCommand where
   toASM EQ_VM (LS e g l) =
     (LS (e+1) g l,
       let trueJmp = "TRUE_EQ_" <> toByteString' e
-          endJmp  = "END_EQ_"  <> toByteString' e in --TODO fix SP refs from here down
+          endJmp  = "END_EQ_"  <> toByteString' e in
             "    //eq\n"
-        <>  "    @SP\n"
-        <>  "    A=M\n"
-        <>  "    D=M\n"
         <>  "    @SP\n"
         <>  "    M=M-1\n"
         <>  "    A=M\n"
+        <>  "    D=M\n"
+        <>  "    A=A-1\n"
         <>  "    D=D-M\n"
         <>  "    @" <> trueJmp <> "\n"
         <>  "    D;JEQ\n"
         <>  "    @SP\n"
-        <>  "    A=M\n"
+        <>  "    A=M-1\n"
         <>  "    M=0\n"
         <>  "    @" <> endJmp <> "\n"
         <>  "    0;JMP\n"
         <>  "(" <> trueJmp <> ")\n"
         <>  "    @SP\n"
-        <>  "    A=M\n"
+        <>  "    A=M-1\n"
         <>  "    M=-1\n"
         <>  "(" <> endJmp <> ")\n")
 
@@ -128,22 +127,21 @@ instance ToASMCode ArithLogicCommand where
           endJmp  = "END_GT_"  <> toByteString' g in
             "    //gt\n"
         <>  "    @SP\n"
-        <>  "    A=M\n"
-        <>  "    D=M\n"
-        <>  "    @SP\n"
         <>  "    M=M-1\n"
         <>  "    A=M\n"
+        <>  "    D=M\n"
+        <>  "    A=A-1\n"
         <>  "    D=D-M\n"
         <>  "    @" <> trueJmp <> "\n"
         <>  "    D;JLT\n"
         <>  "    @SP\n"
-        <>  "    A=M\n"
+        <>  "    A=M-1\n"
         <>  "    M=0\n"
         <>  "    @" <> endJmp <> "\n"
         <>  "    0;JMP\n"
         <>  "(" <> trueJmp <> ")\n"
         <>  "    @SP\n"
-        <>  "    A=M\n"
+        <>  "    A=M-1\n"
         <>  "    M=-1\n"
         <>  "(" <> endJmp <> ")\n")
   
@@ -153,22 +151,21 @@ instance ToASMCode ArithLogicCommand where
           endJmp  = "END_LT_"  <> toByteString' l in
             "    //lt\n"
         <>  "    @SP\n"
-        <>  "    A=M\n"
-        <>  "    D=M\n"
-        <>  "    @SP\n"
         <>  "    M=M-1\n"
         <>  "    A=M\n"
+        <>  "    D=M\n"
+        <>  "    A=A-1\n"
         <>  "    D=D-M\n"
         <>  "    @" <> trueJmp <> "\n"
         <>  "    D;JGT\n"
         <>  "    @SP\n"
-        <>  "    A=M\n"
+        <>  "    A=M-1\n"
         <>  "    M=0\n"
         <>  "    @" <> endJmp <> "\n"
         <>  "    0;JMP\n"
         <>  "(" <> trueJmp <> ")\n"
         <>  "    @SP\n"
-        <>  "    A=M\n"
+        <>  "    A=M-1\n"
         <>  "    M=-1\n"
         <>  "(" <> endJmp <> ")\n")
 
@@ -176,29 +173,27 @@ instance ToASMCode ArithLogicCommand where
     (sts,
         "    //and\n"
     <>  "    @SP\n"
+    <>  "    M=M-1\n"
     <>  "    A=M\n"
     <>  "    D=M\n"
     <>  "    A=A-1\n"
-    <>  "    M=D&M\n"
-    <>  "    @SP\n"
-    <>  "    M=M-1\n")
+    <>  "    M=D&M\n")
 
   toASM OR sts =
     (sts,
         "    //or\n"
     <>  "    @SP\n"
+    <>  "    M=M-1\n"
     <>  "    A=M\n"
     <>  "    D=M\n"
     <>  "    A=A-1\n"
-    <>  "    M=D|M\n"
-    <>  "    @SP\n"
-    <>  "    M=M-1\n")
+    <>  "    M=D|M\n")
 
   toASM NOT sts =
     (sts,
         "    //not\n"
     <>  "    @SP\n"
-    <>  "    A=M\n"
+    <>  "    A=M-1\n"
     <>  "    M=!M\n")
 
  
