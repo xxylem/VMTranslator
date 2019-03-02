@@ -53,9 +53,8 @@ parseArithLogicCMD =
 
 type ErrorMsg = String
 
-data ParseError =
-    InvalidLine ErrorMsg
-    deriving (Eq, Show)
+newtype ParseError = InvalidLine ErrorMsg
+                    deriving (Eq, Show)
 
 parseVMLines :: [BS.ByteString] -> Either ParseError Program
 parseVMLines = undefined
