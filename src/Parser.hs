@@ -68,7 +68,6 @@ parseComment =
         <|> endOfInput
         )
 
-
 removeCommentsAndEmptyLines :: [BS.ByteString] 
                             -> [BS.ByteString]
 removeCommentsAndEmptyLines = filter (not . runParseIsEmptyLineOrComment)

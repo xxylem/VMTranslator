@@ -36,6 +36,75 @@ data MemoryAccessCommand =
 
 
 instance ToASMCode MemoryAccessCommand where
+  toASM (MemCMD PUSH ARGUMENT x) sts =
+    (sts,
+      let xBs = toByteString' x <> "\n" in
+          "    //push argument " <> xBs
+      <>  "    @" <> xBs
+      <>  "    D=A\n"
+      <>  "    @ARG\n"
+      <>  "    A=D+M\n"
+      <>  "    D=M\n"
+      <>  "    @SP\n"
+      <>  "    A=M\n"
+      <>  "    M=D\n"
+      <>  "    @SP\n"
+      <>  "    M=M+1\n")
+
+  toASM (MemCMD POP  ARGUMENT x) sts =
+    (sts,
+      let xBs = toByteString' x <> "\n" in
+          "    //pop argument " <> xBs
+      <>  "    @" <> xBs
+      <>  "    D=A\n"
+      <>  "    @ARG\n"
+      <>  "    D=D+M\n"
+      <>  "    @R13\n"
+      <>  "    M=D\n"
+      <>  "    @SP\n"
+      <>  "    M=M-1\n"
+      <>  "    A=M\n"
+      <>  "    D=M\n"
+      <>  "    @R13\n"
+      <>  "    A=M\n"
+      <>  "    M=D\n")
+
+  toASM (MemCMD PUSH LOCAL    x) sts =
+    (sts,
+      let xBs = toByteString' x <> "\n" in
+          "    //push local " <> xBs
+      <>  "    @" <> xBs
+      <>  "    D=A\n"
+      <>  "    @LCL\n"
+      <>  "    A=D+M\n"
+      <>  "    D=M\n"
+      <>  "    @SP\n"
+      <>  "    A=M\n"
+      <>  "    M=D\n"
+      <>  "    @SP\n"
+      <>  "    M=M+1\n")
+
+  toASM (MemCMD POP  LOCAL    x) sts =
+    (sts,
+      let xBs = toByteString' x <> "\n" in
+          "    //pop local " <> xBs
+      <>  "    @" <> xBs
+      <>  "    D=A\n"
+      <>  "    @LCL\n"
+      <>  "    D=D+M\n"
+      <>  "    @R13\n"
+      <>  "    M=D\n"
+      <>  "    @SP\n"
+      <>  "    M=M-1\n"
+      <>  "    A=M\n"
+      <>  "    D=M\n"
+      <>  "    @R13\n"
+      <>  "    A=M\n"
+      <>  "    M=D\n")
+
+  --toASM (MemCMD PUSH STATIC   x) =
+  --toASM (MemCMD POP  STATIC   x) =
+
   toASM (MemCMD PUSH CONSTANT x) sts =
     (sts,
       let xBs = toByteString' x <> "\n" in
@@ -47,7 +116,122 @@ instance ToASMCode MemoryAccessCommand where
       <>  "    M=D\n"
       <>  "    @SP\n"
       <>  "    M=M+1\n")
-      -- TODO use builders or just one long string - slow implem.
+
+  toASM (MemCMD PUSH THIS     x) sts =
+    (sts,
+      let xBs = toByteString' x <> "\n" in
+          "    //push this " <> xBs
+      <>  "    @" <> xBs
+      <>  "    D=A\n"
+      <>  "    @THIS\n"
+      <>  "    A=D+M\n"
+      <>  "    D=M\n"
+      <>  "    @SP\n"
+      <>  "    A=M\n"
+      <>  "    M=D\n"
+      <>  "    @SP\n"
+      <>  "    M=M+1\n")
+
+  toASM (MemCMD POP  THIS     x) sts =
+    (sts,
+      let xBs = toByteString' x <> "\n" in
+          "    //pop this " <> xBs
+      <>  "    @" <> xBs
+      <>  "    D=A\n"
+      <>  "    @THIS\n"
+      <>  "    D=D+M\n"
+      <>  "    @R13\n"
+      <>  "    M=D\n"
+      <>  "    @SP\n"
+      <>  "    M=M-1\n"
+      <>  "    A=M\n"
+      <>  "    D=M\n"
+      <>  "    @R13\n"
+      <>  "    A=M\n"
+      <>  "    M=D\n")
+
+  toASM (MemCMD PUSH THAT     x) sts =
+    (sts,
+      let xBs = toByteString' x <> "\n" in
+          "    //push that " <> xBs
+      <>  "    @" <> xBs
+      <>  "    D=A\n"
+      <>  "    @THAT\n"
+      <>  "    A=D+M\n"
+      <>  "    D=M\n"
+      <>  "    @SP\n"
+      <>  "    A=M\n"
+      <>  "    M=D\n"
+      <>  "    @SP\n"
+      <>  "    M=M+1\n")
+
+  toASM (MemCMD POP  THAT     x) sts =
+    (sts,
+      let xBs = toByteString' x <> "\n" in
+          "    //pop that " <> xBs
+      <>  "    @" <> xBs
+      <>  "    D=A\n"
+      <>  "    @THAT\n"
+      <>  "    D=D+M\n"
+      <>  "    @R13\n"
+      <>  "    M=D\n"
+      <>  "    @SP\n"
+      <>  "    M=M-1\n"
+      <>  "    A=M\n"
+      <>  "    D=M\n"
+      <>  "    @R13\n"
+      <>  "    A=M\n"
+      <>  "    M=D\n")
+
+  toASM (MemCMD PUSH POINTER  x) sts =
+    (sts,
+      let xBs  = toByteString' x     <> "\n"
+          pntr = toByteString' (3+x) <> "\n" in
+          "    //push pointer " <> xBs
+      <>  "    @" <> pntr
+      <>  "    D=M\n"
+      <>  "    @SP\n"
+      <>  "    A=M\n"
+      <>  "    M=D\n"
+      <>  "    @SP\n"
+      <>  "    M=M+1\n")
+
+  toASM (MemCMD POP  POINTER  x) sts =
+    (sts,
+      let xBs  = toByteString' x     <> "\n"
+          pntr = toByteString' (3+x) <> "\n" in
+          "    //pop pointer " <> xBs
+      <>  "    @SP\n"
+      <>  "    M=M-1\n"
+      <>  "    A=M\n"
+      <>  "    D=M\n"
+      <>  "    @" <> pntr
+      <>  "    M=D\n")
+
+  toASM (MemCMD PUSH TEMP     x) sts =
+    (sts,
+      let xBs = toByteString' x     <> "\n"
+          tmp = toByteString' (5+x) <> "\n" in
+          "    //push temp " <> xBs
+      <>  "    @" <> tmp
+      <>  "    D=M\n"
+      <>  "    @SP\n"
+      <>  "    A=M\n"
+      <>  "    M=D\n"
+      <>  "    @SP\n"
+      <>  "    M=M+1\n")
+
+  toASM (MemCMD POP  TEMP     x) sts =
+    (sts,
+      let xBs = toByteString' x     <> "\n"
+          tmp = toByteString' (5+x) <> "\n" in
+          "    //pop temp " <> xBs
+      <>  "    @SP\n"
+      <>  "    M=M-1\n"
+      <>  "    A=M\n"
+      <>  "    D=M\n"
+      <>  "    @" <> tmp
+      <>  "    M=D\n")
 
 
 data ArithLogicCommand =
