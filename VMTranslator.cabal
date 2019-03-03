@@ -19,7 +19,6 @@ executable VMTranslator
   main-is:             Main.hs
   ghc-options:         -Wall -fwarn-tabs
   other-modules:       Parser
-                     , CodeWriter
                      , Model
   -- other-extensions:
   build-depends:       base >=4.11 && <4.12
