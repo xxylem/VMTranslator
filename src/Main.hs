@@ -3,7 +3,6 @@
 module Main where
 
 import Parser
-import CodeWriter
 import Model
 
 import qualified Data.ByteString.Char8 as BS
