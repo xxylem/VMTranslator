@@ -51,6 +51,11 @@ parseArithLogicCMD =
     <|> (string "or"  >> return OR)
     <|> (string "not" >> return NOT)
 
+parseVMLine :: Parser VMLine
+parseVMLine = 
+        (AL_VM <$> parseArithLogicCMD)
+    <|> (M_VM  <$> parseMemoryAccessCMD)
+
 type ErrorMsg = String
 
 newtype ParseError = InvalidLine ErrorMsg
@@ -76,8 +81,6 @@ parseVMLines :: [BS.ByteString] -> Either ParseError Program
 parseVMLines ls = go $ removeCommentsAndEmptyLines ls where
         go []     = Right []
         go (l:ls) =
-            case parseOnly parseArithLogicCMD l of
-                (Right cmd) -> (:) <$> Right (AL_VM cmd) <*> parseVMLines ls
-                (Left _)    -> case parseOnly parseMemoryAccessCMD l of
-                    (Right cmd) -> (:) <$> Right (M_VM cmd) <*> parseVMLines ls
-                    (Left err)  -> Left $ InvalidLine err
+            case parseOnly parseVMLine l of
+                (Right cmd) -> (:) <$> Right cmd <*> parseVMLines ls
+                (Left err)  -> Left $ InvalidLine err
