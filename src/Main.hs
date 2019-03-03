@@ -7,6 +7,7 @@ import CodeWriter
 import Model
 
 import qualified Data.ByteString.Char8 as BS
+import Data.ByteString.Conversion (toByteString')
 import ReadArgs (readArgs)
 import System.FilePath (dropExtension)
 import System.IO
@@ -47,9 +48,10 @@ initState = LS 0 0 0
 writeProgramToFile :: FilePath -> Program -> IO ()
 writeProgramToFile fp program =
     withFile fp WriteMode (\h -> writeProgram h program initState)
-                where writeProgram _ [] _       = return ()
+                where fileName                  = toByteString' $ dropExtension fp <> "."
+                      writeProgram _ [] _       = return ()
                       writeProgram h (l:ls) sts = 
-                        let (sts', code) = toASM l sts in
+                        let (sts', code) = toASM l sts fileName in
                             BS.hPutStr h code
                         >>  BS.hPutStr h "\n"
                         >>  writeProgram h ls sts'
