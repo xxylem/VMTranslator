@@ -105,9 +105,9 @@ instance ToASMCode MemoryAccessCommand where
       <>  "    A=M\n"
       <>  "    M=D\n")
 
-  toASM (MemCMD PUSH STATIC   x) sts fn =
+  toASM (MemCMD PUSH STATIC   x) sts fileName =
     (sts, let xBs = toByteString' x <> "\n" 
-              stcVar = fn <> toByteString' x <> "\n" in
+              stcVar = fileName <> toByteString' x <> "\n" in
           "    //push static " <> xBs
       <>  "    @" <> stcVar
       <>  "    D=M\n"
@@ -117,9 +117,9 @@ instance ToASMCode MemoryAccessCommand where
       <>  "    @SP\n"
       <>  "    M=M+1\n")
 
-  toASM (MemCMD POP  STATIC   x) sts fn =
+  toASM (MemCMD POP  STATIC   x) sts fileName =
     (sts, let xBs = toByteString' x <> "\n"
-              stcVar = fn <> toByteString' x <> "\n" in
+              stcVar = fileName <> toByteString' x <> "\n" in
           "    //pop static " <> xBs
       <>  "    @SP\n"
       <>  "    M=M-1\n"
@@ -403,10 +403,25 @@ instance ToASMCode ArithLogicCommand where
     <>  "    A=M-1\n"
     <>  "    M=!M\n")
 
- 
+type Label = BS.ByteString
+
+data ProgramFlowCommand =
+    LABEL   Label
+  | GOTO    Label
+  | IF_GOTO Label
+  deriving (Eq, Show)
+
+data FunctionCommand =
+    FUN Label Integer
+  | CALL Label Integer
+  | RETURN
+  deriving (Eq, Show)
+
 data VMLine =
     AL_VM ArithLogicCommand
   | M_VM  MemoryAccessCommand
+  | P_VM  ProgramFlowCommand
+  | F_VM  FunctionCommand
   deriving (Eq, Show)
 
 instance ToASMCode VMLine where

@@ -43,3 +43,14 @@ handleSingleFile fp = do
                 where changeExt fp = dropExtension fp ++ ".asm"
         Left err -> putStrLn ("Parse error: "
                                 <> show err)
+
+-- todo: init code: start by generating assembly code that sets SP=256
+--      then call Sys.init // Start executing (the translated code of) Sys.init
+
+--todo: call f n
+--todo: function f k
+--todo: return
+
+--todo: goto
+--todo: if-goto
+--todo: label
