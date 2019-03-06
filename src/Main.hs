@@ -17,12 +17,24 @@ import System.IO
 -- a single .asm file.
 
 initState :: LabelStates
-initState = LS 0 0 0
+initState = LS 0 0 0 0 Outside
+
+initCode :: ASMCode
+initCode =
+    let (_, sysInitCall) = toASM (CALL "Sys.init" 0) initState "" in
+        "    //init code\n"
+    <>  "    @256\n"
+    <>  "    D=A\n"
+    <>  "    @SP\n"
+    <>  "    M=D\n"
+    <>  sysInitCall -- change: will pick up name Sys from elsewhere maybe
 
 writeProgramToFile :: FilePath -> Program -> IO ()
 writeProgramToFile fp program =
-    withFile fp WriteMode (\h -> writeProgram h program initState)
-                where fileName                  = toByteString' $ dropExtension fp <> "."
+    withFile fp WriteMode (\h -> writeInitCode h
+                              >> writeProgram h program initState)
+                where writeInitCode h           = BS.hPutStr h initCode
+                      fileName                  = toByteString' $ dropExtension fp <> "."
                       writeProgram _ [] _       = return ()
                       writeProgram h (l:ls) sts = 
                         let (sts', code) = toASM l sts fileName in

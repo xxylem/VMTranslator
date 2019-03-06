@@ -8,6 +8,18 @@ import Data.ByteString.Conversion (toByteString')
 type FileName = BS.ByteString
 type ASMCode  = BS.ByteString
 
+type EqLabel = Integer
+type GtLabel = Integer
+type LtLabel = Integer
+type RetLabel = Integer
+data InFunction =
+    Inside Label
+  | Outside
+  deriving (Eq, Show)
+
+data LabelStates = LS EqLabel GtLabel LtLabel RetLabel InFunction
+                  deriving (Eq, Show)
+
 -- ===== --
 -- Model --
 -- This module holds all the data definitions that the parser will parse into.
@@ -32,11 +44,9 @@ data Segment =
   deriving (Eq, Show)
 
 type Index = Integer
-
 data MemoryAccessCommand =
     MemCMD Direction Segment Index
     deriving (Eq, Show)
-
 
 instance ToASMCode MemoryAccessCommand where
   toASM (MemCMD PUSH ARGUMENT x) sts _ =
@@ -269,13 +279,6 @@ data ArithLogicCommand =
   | NOT
   deriving (Eq, Show)
 
-type EqLabel = Integer
-type GtLabel = Integer
-type LtLabel = Integer
-
-data LabelStates = LS EqLabel GtLabel LtLabel
-                  deriving (Eq, Show)
-
 instance ToASMCode ArithLogicCommand where
   toASM ADD sts _ =
     (sts,
@@ -304,8 +307,8 @@ instance ToASMCode ArithLogicCommand where
     <>  "    A=M-1\n"
     <>  "    M=-M\n")
 
-  toASM EQ_VM (LS e g l) _ =
-    (LS (e+1) g l,
+  toASM EQ_VM (LS e g l r funName) _ =
+    (LS (e+1) g l r funName,
       let trueJmp = "TRUE_EQ_" <> toByteString' e
           endJmp  = "END_EQ_"  <> toByteString' e in
             "    //eq\n"
@@ -328,8 +331,8 @@ instance ToASMCode ArithLogicCommand where
         <>  "    M=-1\n"
         <>  "(" <> endJmp <> ")\n")
 
-  toASM GT_VM (LS e g l) _ =
-    (LS e (g+1) l,
+  toASM GT_VM (LS e g l r funName) _ =
+    (LS e (g+1) l r funName,
       let trueJmp = "TRUE_GT_" <> toByteString' g
           endJmp  = "END_GT_"  <> toByteString' g in
             "    //gt\n"
@@ -352,8 +355,8 @@ instance ToASMCode ArithLogicCommand where
         <>  "    M=-1\n"
         <>  "(" <> endJmp <> ")\n")
   
-  toASM LT_VM (LS e g l) _ =
-    (LS e g (l+1),
+  toASM LT_VM (LS e g l r funName) _ =
+    (LS e g (l+1) r funName,
       let trueJmp = "TRUE_LT_" <> toByteString' l
           endJmp  = "END_LT_"  <> toByteString' l in
             "    //lt\n"
@@ -411,11 +414,82 @@ data ProgramFlowCommand =
   | IF_GOTO Label
   deriving (Eq, Show)
 
+instance ToASMCode ProgramFlowCommand where
+  toASM (LABEL label) sts@(LS e g l r funName) fileName =
+    (sts,
+        let label' = case funName of
+                      Inside funName -> funName <> "$" <> label
+                      Outside        -> label
+                      in
+        "    //label " <> label <> "\n"
+    <>  "(" <> label' <> ")\n")
+
+  toASM (IF_GOTO l) sts fileName =
+    (sts,
+        let labelWithNL = l <> "\n" in
+        "    //if-goto " <> labelWithNL
+    <>  "    @SP\n"
+    <>  "    AM=M-1\n"
+    <>  "    M=D\n"
+    <>  "    @" <> labelWithNL
+    <>  "    D;JNE\n")
+
 data FunctionCommand =
     FUN Label Integer
   | CALL Label Integer
   | RETURN
   deriving (Eq, Show)
+
+instance ToASMCode FunctionCommand where
+  toASM (CALL funToCall nArgs) (LS e g l r funName) fileName =
+    (LS e g l (r+1) funName,
+        let retAdd = "RETURN_LOCATION_$" <> toByteString' r in
+        "    //call " <> funToCall <> "\n"
+    <>  "    @" <> retAdd <> "\n"
+    <>  "    D=A\n"
+    <>  "    @SP\n"
+    <>  "    A=M\n"
+    <>  "    M=D\n"
+
+    <>  "    @LCL\n"
+    <>  "    M=D\n"
+    <>  "    @SP\n"
+    <>  "    AM=M+1\n"
+    <>  "    M=D\n"
+
+    <>  "    @ARG\n"
+    <>  "    M=D\n"
+    <>  "    @SP\n"
+    <>  "    AM=M+1\n"
+    <>  "    M=D\n"
+
+    <>  "    @THIS\n"
+    <>  "    M=D\n"
+    <>  "    @SP\n"
+    <>  "    AM=M+1\n"
+    <>  "    M=D\n"
+
+    <>  "    @THAT\n"
+    <>  "    M=D\n"
+    <>  "    @SP\n"
+    <>  "    AM=M+1\n"
+    <>  "    M=D\n"
+
+    <>  "    @SP\n"
+    <>  "    MD=M+1\n"
+    <>  "    @LCL\n"
+    <>  "    M=D\n"
+    
+    <>  "    @" <> toByteString' nArgs <> "\n"
+    <>  "    D=D-A\n"
+    <>  "    @5\n"
+    <>  "    D=D-A\n"
+    <>  "    @ARG\n"
+    <>  "    M=D\n"
+
+    <>  "    @" <> funToCall <> "\n"
+    <>  "    0;JMP\n"
+    <>  "(" <> retAdd <> ")\n")
 
 data VMLine =
     AL_VM ArithLogicCommand
@@ -427,5 +501,7 @@ data VMLine =
 instance ToASMCode VMLine where
   toASM (AL_VM c) = toASM c
   toASM (M_VM  c) = toASM c
+  toASM (P_VM  c) = toASM c
+  toASM (F_VM  c) = toASM c
 
 type Program = [VMLine]
