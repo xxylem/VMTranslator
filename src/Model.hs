@@ -424,9 +424,16 @@ instance ToASMCode ProgramFlowCommand where
         "    //label " <> label <> "\n"
     <>  "(" <> label' <> ")\n")
 
-  toASM (IF_GOTO l) sts fileName =
+  toASM (GOTO label) sts fileName =
     (sts,
-        let labelWithNL = l <> "\n" in
+        let labelWithNL = label <> "\n" in
+        "    //goto " <> labelWithNL
+    <>  "    @" <> labelWithNL
+    <>  "    0;JMP\n")
+
+  toASM (IF_GOTO label) sts fileName =
+    (sts,
+        let labelWithNL = label <> "\n" in
         "    //if-goto " <> labelWithNL
     <>  "    @SP\n"
     <>  "    AM=M-1\n"
