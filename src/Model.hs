@@ -4,6 +4,7 @@ module Model where
 
 import qualified Data.ByteString.Char8 as BS
 import Data.ByteString.Conversion (toByteString')
+import System.IO
 
 type FileName = BS.ByteString
 type ASMCode  = BS.ByteString
@@ -17,7 +18,7 @@ data InFunction =
   | Outside
   deriving (Eq, Show)
 
-data LabelStates = LS EqLabel GtLabel LtLabel RetLabel InFunction
+data WritingStates = LS EqLabel GtLabel LtLabel RetLabel InFunction Handle
                   deriving (Eq, Show)
 
 -- ===== --
@@ -25,7 +26,7 @@ data LabelStates = LS EqLabel GtLabel LtLabel RetLabel InFunction
 -- This module holds all the data definitions that the parser will parse into.
 
 class ToASMCode a where
-  toASM :: a -> LabelStates -> FileName -> (LabelStates, ASMCode)
+  toASM :: a -> WritingStates -> FileName -> (WritingStates, ASMCode)
 
 data Direction =
     PUSH
@@ -307,8 +308,8 @@ instance ToASMCode ArithLogicCommand where
     <>  "    A=M-1\n"
     <>  "    M=-M\n")
 
-  toASM EQ_VM (LS e g l r funName) _ =
-    (LS (e+1) g l r funName,
+  toASM EQ_VM (LS e g l r funName h) _ =
+    (LS (e+1) g l r funName h,
       let trueJmp = "TRUE_EQ_" <> toByteString' e
           endJmp  = "END_EQ_"  <> toByteString' e in
             "    //eq\n"
@@ -331,8 +332,8 @@ instance ToASMCode ArithLogicCommand where
         <>  "    M=-1\n"
         <>  "(" <> endJmp <> ")\n")
 
-  toASM GT_VM (LS e g l r funName) _ =
-    (LS e (g+1) l r funName,
+  toASM GT_VM (LS e g l r funName h) _ =
+    (LS e (g+1) l r funName h,
       let trueJmp = "TRUE_GT_" <> toByteString' g
           endJmp  = "END_GT_"  <> toByteString' g in
             "    //gt\n"
@@ -355,8 +356,8 @@ instance ToASMCode ArithLogicCommand where
         <>  "    M=-1\n"
         <>  "(" <> endJmp <> ")\n")
   
-  toASM LT_VM (LS e g l r funName) _ =
-    (LS e g (l+1) r funName,
+  toASM LT_VM (LS e g l r funName h) _ =
+    (LS e g (l+1) r funName h,
       let trueJmp = "TRUE_LT_" <> toByteString' l
           endJmp  = "END_LT_"  <> toByteString' l in
             "    //lt\n"
@@ -415,7 +416,7 @@ data ProgramFlowCommand =
   deriving (Eq, Show)
 
 instance ToASMCode ProgramFlowCommand where
-  toASM (LABEL label) sts@(LS e g l r funName) fileName =
+  toASM (LABEL label) sts@(LS e g l r funName h) fileName =
     (sts,
         let label' = case funName of
                       Inside funName -> funName <> "$" <> label
@@ -448,7 +449,7 @@ data FunctionCommand =
   deriving (Eq, Show)
 
 instance ToASMCode FunctionCommand where
-  toASM (FUN label nVars) (LS e g l r funName) fileName =
+  toASM (FUN label nVars) (LS e g l r funName h) fileName =
     let updateFunName Outside = Inside label
         nPush0 0 = ""
         nPush0 n =     "    @0\n"
@@ -459,13 +460,13 @@ instance ToASMCode FunctionCommand where
                    <>  "    @SP\n"
                    <>  "    M=M+1\n"
                    <>  nPush0 (n-1) in --todo improve algo: remove rep by creating internal rec fun.
-    (LS e g l r (updateFunName funName),
-        "    //function " <> label <> " " <> (toByteString' nVars) <> "\n"
+    (LS e g l r (updateFunName funName ) h,
+        "    //function " <> label <> " " <> toByteString' nVars <> "\n"
     <>  "(" <> label <> ")\n"--todo add filename here?
     <>  nPush0 nVars)
   
-  toASM (CALL funToCall nArgs) (LS e g l r funName) fileName =
-    (LS e g l (r+1) funName,
+  toASM (CALL funToCall nArgs) (LS e g l r funName h) fileName =
+    (LS e g l (r+1) funName h,
         let retAdd = "RETURN_LOCATION_$" <> toByteString' r in
         "    //call " <> funToCall <> " " <> toByteString' nArgs <> "\n"
     <>  "    @" <> retAdd <> "\n"
@@ -514,9 +515,9 @@ instance ToASMCode FunctionCommand where
     <>  "    0;JMP\n"
     <>  "(" <> retAdd <> ")\n")
 
-  toASM RETURN (LS e g l r funName) fileName =
+  toASM RETURN (LS e g l r funName h) fileName =
     let updateFunName (Inside _) = Outside in
-      (LS e g l r (updateFunName funName),
+      (LS e g l r (updateFunName funName) h,
           "    //return\n"
       <>  "       //ret: FRAME = LCL\n"
       <>  "    @LCL\n"
@@ -601,4 +602,9 @@ instance ToASMCode VMLine where
   toASM (P_VM  c) = toASM c
   toASM (F_VM  c) = toASM c
 
-type Program = [VMLine]
+type VMFile = ([VMLine], FileName)
+type VMProgram = [VMFile]
+
+type UnparsedVMLine = BS.ByteString
+type UnparsedVMFile = ([UnparsedVMLine], FilePath)
+type UnparsedVMProgram = [UnparsedVMFile]

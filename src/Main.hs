@@ -8,7 +8,8 @@ import Model
 import qualified Data.ByteString.Char8 as BS
 import Data.ByteString.Conversion (toByteString')
 import ReadArgs (readArgs)
-import System.FilePath (dropExtension)
+import System.Directory (listDirectory)
+import System.FilePath (dropExtension, hasExtension, isExtensionOf, (</>))
 import System.IO
 
 -- ============= --
@@ -16,56 +17,79 @@ import System.IO
 -- The VM translator will take as input one .vm file or multiple .vm files in a directory and output
 -- a single .asm file.
 
-initState :: LabelStates
+initState :: Handle -> WritingStates
 initState = LS 0 0 0 0 Outside
 
-initCode :: ASMCode
-initCode =
-    let (_, sysInitCall) = toASM (CALL "Sys.init" 0) initState "" in
-        "    //init code\n"
-    <>  "    @256\n"
-    <>  "    D=A\n"
-    <>  "    @SP\n"
-    <>  "    M=D\n"
-    <>  sysInitCall -- change: will pick up name Sys from elsewhere maybe
+writeInitCode :: Handle -> IO WritingStates
+writeInitCode h =
+    let (sts, sysInitCall) = toASM (CALL "Sys.init" 0) (initState h) "" in
+    BS.hPutStrLn h
+        (       "    //init code\n"
+            <>  "    @256\n"
+            <>  "    D=A\n"
+            <>  "    @SP\n"
+            <>  "    M=D\n"
+            <>  sysInitCall
+        )
+    *> return sts
 
+translateDirectory :: FilePath -> IO ()
+translateDirectory dirPath = do
+    dirContents <- listDirectory dirPath
+    let vmFileNames = map (dirPath </>) $ filter (".vm" `isExtensionOf`) dirContents
+    vmFiles <- readVMFiles vmFileNames
+    case parseVMFiles vmFiles of
+        Right program -> writeVMProgram program dirPath
+        Left  err     -> print err
 
+translateSingleFile :: FilePath -> IO ()
+translateSingleFile filePath = do
+    vmFile <- readVMFile filePath
+    case parseVMFile vmFile of
+        Right program -> writeSingleVMFile program ((dropExtension filePath) ++ ".asm")
+        Left err -> putStrLn ("Parse error: "
+                                <> show err)
 
-writeProgramToFile :: FilePath -> Program -> IO ()
-writeProgramToFile fp program =
-    withFile fp WriteMode (\h -> 
-        -- writeInitCode h >> 
-                            writeProgram h program initState)
-                where writeInitCode h           = BS.hPutStr h initCode
-                      fileName                  = toByteString' $ dropExtension fp <> "."
-                      writeProgram _ [] _       = return ()
-                      writeProgram h (l:ls) sts = 
-                        let (sts', code) = toASM l sts fileName in
-                            BS.hPutStr h code
-                        >>  BS.hPutStr h "\n"
-                        >>  writeProgram h ls sts'
+readVMFile :: FilePath -> IO UnparsedVMFile
+readVMFile fp = do
+    file <- BS.readFile fp
+    return (BS.lines file, dropExtension fp)
+
+readVMFiles :: [FilePath] -> IO UnparsedVMProgram
+readVMFiles [] = return []
+readVMFiles (f:fs) = (:) <$> readVMFile f <*> readVMFiles fs
+
+writeVMProgram :: VMProgram -> FilePath -> IO ()
+writeVMProgram vmProgram dirPath =
+    withFile (dirPath </> dirPath ++ ".asm") WriteMode (\h -> do
+        sts <- writeInitCode h
+        writeVMFiles sts vmProgram)
+
+writeVMFiles :: WritingStates -> VMProgram -> IO ()
+writeVMFiles _ [] = return ()
+writeVMFiles sts (f:fs) = do
+    sts' <- writeVMFile sts f
+    writeVMFiles sts' fs
+
+writeVMFile :: WritingStates -> VMFile -> IO WritingStates
+writeVMFile sts                        ([],_)     = return sts
+writeVMFile sts@(LS e g l r funName h) (line:ls, fileName) =
+    let (sts', code) = toASM line sts fileName in
+            BS.hPutStr h code
+        >>  BS.hPutStr h "\n"
+        >>  writeVMFile sts' (ls, fileName)
+
+writeSingleVMFile :: VMFile -> FilePath -> IO ()
+writeSingleVMFile vmFile filePath =
+    withFile filePath WriteMode (\h -> 
+        writeVMFile (initState h) vmFile >> return ())
 
 main :: IO ()
 main = do
     (path :: FilePath) <- readArgs
-    handleSingleFile path
-
-handleSingleFile :: FilePath -> IO ()
-handleSingleFile fp = do
-    file <- BS.readFile fp
-    case parseVMLines $ BS.lines file of
-        Right program -> writeProgramToFile (changeExt fp) $! program
-                where changeExt fp = dropExtension fp ++ ".asm"
-        Left err -> putStrLn ("Parse error: "
-                                <> show err)
-
--- todo: init code: start by generating assembly code that sets SP=256
---      then call Sys.init // Start executing (the translated code of) Sys.init
-
---todo: call f n
---todo: function f k
---todo: return
-
---todo: goto
---todo: if-goto
---todo: label
+    if hasExtension path
+        then if ".vm" `isExtensionOf` path 
+                    then translateSingleFile path 
+                    else putStrLn $ "Usage: VMTranslator.exe \"file.vm\"\n"
+                                <>  "\tVMTranslator.exe \"directory\"\n"
+        else translateDirectory path

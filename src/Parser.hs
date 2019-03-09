@@ -7,6 +7,8 @@ import Model
 import Control.Applicative ((<|>))
 import Data.Attoparsec.ByteString.Char8
 import qualified Data.ByteString.Char8 as BS
+import Data.ByteString.Conversion (toByteString')
+
 
 -- ====== --
 -- Parser --
@@ -137,10 +139,16 @@ removeCommentsAndEmptyLines = filter (not . runParseIsEmptyLineOrComment)
                         (Right _) -> True
                         (Left _)  -> False
 
-parseVMLines :: [BS.ByteString] -> Either ParseError Program
-parseVMLines ls = go $ removeCommentsAndEmptyLines ls where
-        go []     = Right []
-        go (l:ls) =
-            case parseOnly parseVMLine l of
-                (Right cmd) -> (:) <$> Right cmd <*> parseVMLines ls
-                (Left err)  -> Left $ InvalidLine err
+parseVMFile :: UnparsedVMFile -> Either ParseError VMFile
+parseVMFile (ls, fp) = case go $ removeCommentsAndEmptyLines ls of
+                            Right file -> Right (file, toByteString' fp)
+                            Left  err  -> Left err
+        where   go []     = Right []
+                go (l:ls) =
+                    case parseOnly parseVMLine l of
+                    (Right cmd) -> (:) <$> Right cmd <*> go ls
+                    (Left err)  -> Left $ InvalidLine err
+
+parseVMFiles :: UnparsedVMProgram -> Either ParseError VMProgram
+parseVMFiles [] = return []
+parseVMFiles (f:fs) = (:) <$> (parseVMFile f) <*> parseVMFiles fs
