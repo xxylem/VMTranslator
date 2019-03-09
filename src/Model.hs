@@ -425,16 +425,16 @@ instance ToASMCode ProgramFlowCommand where
         "    //label " <> label <> "\n"
     <>  "(" <> label' <> ")\n")
 
-  toASM (GOTO label) sts fileName =
+  toASM (GOTO label) sts@(LS e g l r (Inside funName) h) fileName =
     (sts,
-        let labelWithNL = label <> "\n" in
+        let labelWithNL = funName <> "$" <> label <> "\n" in
         "    //goto " <> labelWithNL
     <>  "    @" <> labelWithNL
     <>  "    0;JMP\n")
 
-  toASM (IF_GOTO label) sts fileName =
+  toASM (IF_GOTO label) sts@(LS e g l r (Inside funName) h) fileName =
     (sts,
-        let labelWithNL = label <> "\n" in
+        let labelWithNL = funName <> "$" <> label <> "\n" in
         "    //if-goto " <> labelWithNL
     <>  "    @SP\n"
     <>  "    AM=M-1\n"
@@ -460,7 +460,7 @@ instance ToASMCode FunctionCommand where
                    <>  "    @SP\n"
                    <>  "    M=M+1\n"
                    <>  nPush0 (n-1) in --todo improve algo: remove rep by creating internal rec fun.
-    (LS e g l r (updateFunName funName ) h,
+    (LS e g l r (updateFunName funName) h,
         "    //function " <> label <> " " <> toByteString' nVars <> "\n"
     <>  "(" <> label <> ")\n"--todo add filename here?
     <>  nPush0 nVars)
