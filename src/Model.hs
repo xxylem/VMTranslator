@@ -438,7 +438,7 @@ instance ToASMCode ProgramFlowCommand where
         "    //if-goto " <> labelWithNL
     <>  "    @SP\n"
     <>  "    AM=M-1\n"
-    <>  "    M=D\n"
+    <>  "    D=M\n"
     <>  "    @" <> labelWithNL
     <>  "    D;JNE\n")
 
