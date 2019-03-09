@@ -9,7 +9,7 @@ import qualified Data.ByteString.Char8 as BS
 import Data.ByteString.Conversion (toByteString')
 import ReadArgs (readArgs)
 import System.Directory (listDirectory)
-import System.FilePath (dropExtension, hasExtension, isExtensionOf, (</>))
+import System.FilePath (dropExtension, hasExtension, isExtensionOf, (</>), takeBaseName)
 import System.IO
 
 -- ============= --
@@ -53,7 +53,7 @@ translateSingleFile filePath = do
 readVMFile :: FilePath -> IO UnparsedVMFile
 readVMFile fp = do
     file <- BS.readFile fp
-    return (BS.lines file, dropExtension fp)
+    return (BS.lines file, takeBaseName fp)
 
 readVMFiles :: [FilePath] -> IO UnparsedVMProgram
 readVMFiles [] = return []

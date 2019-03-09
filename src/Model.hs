@@ -118,7 +118,7 @@ instance ToASMCode MemoryAccessCommand where
 
   toASM (MemCMD PUSH STATIC   x) sts fileName =
     (sts, let xBs = toByteString' x <> "\n" 
-              stcVar = fileName <> toByteString' x <> "\n" in
+              stcVar = fileName <> "." <> toByteString' x <> "\n" in
           "    //push static " <> xBs
       <>  "    @" <> stcVar
       <>  "    D=M\n"
