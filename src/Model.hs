@@ -448,10 +448,26 @@ data FunctionCommand =
   deriving (Eq, Show)
 
 instance ToASMCode FunctionCommand where
+  toASM (FUN label nVars) (LS e g l r funName) fileName =
+    let updateFunName Outside = Inside label
+        nPush0 0 = ""
+        nPush0 n =     "    @0\n"
+                   <>  "    D=A\n"
+                   <>  "    @SP\n"
+                   <>  "    A=M\n"
+                   <>  "    M=D\n"
+                   <>  "    @SP\n"
+                   <>  "    M=M+1\n"
+                   <>  nPush0 (n-1) in --todo improve algo: remove rep by creating internal rec fun.
+    (LS e g l r (updateFunName funName),
+        "    //function " <> label <> " " <> (toByteString' nVars) <> "\n"
+    <>  "(" <> label <> ")\n"--todo add filename here?
+    <>  nPush0 nVars)
+  
   toASM (CALL funToCall nArgs) (LS e g l r funName) fileName =
     (LS e g l (r+1) funName,
         let retAdd = "RETURN_LOCATION_$" <> toByteString' r in
-        "    //call " <> funToCall <> "\n"
+        "    //call " <> funToCall <> " " <> toByteString' nArgs <> "\n"
     <>  "    @" <> retAdd <> "\n"
     <>  "    D=A\n"
     <>  "    @SP\n"
@@ -497,6 +513,80 @@ instance ToASMCode FunctionCommand where
     <>  "    @" <> funToCall <> "\n"
     <>  "    0;JMP\n"
     <>  "(" <> retAdd <> ")\n")
+
+  toASM RETURN (LS e g l r funName) fileName =
+    let updateFunName (Inside _) = Outside in
+      (LS e g l r (updateFunName funName),
+          "    //return\n"
+      <>  "       //ret: FRAME = LCL\n"
+      <>  "    @LCL\n"
+      <>  "    D=M\n"
+      <>  "    @R5\n"
+      <>  "    M=D\n"
+
+      <>  "       //ret: RET = *(FRAME-5)\n"
+      <>  "    @5\n"
+      <>  "    D=A\n"
+      <>  "    @R5\n"
+      <>  "    A=M-D\n"
+      <>  "    D=M\n"
+      <>  "    @R6\n"
+      <>  "    M=D\n"
+
+      <>  "       //ret: *ARG = pop()\n"
+      <>  "    @SP\n"
+      <>  "    M=M-1\n"
+      <>  "    A=M\n" -- todo can we use AM=?
+      <>  "    D=M\n"
+      <>  "    @ARG\n"
+      <>  "    A=M\n"
+      <>  "    M=D\n"
+
+      <>  "       //ret: SP = ARG+1\n"
+      <>  "    @ARG\n"
+      <>  "    D=M+1\n"
+      <>  "    @SP\n"
+      <>  "    M=D\n"
+
+      <>  "       //ret: THAT = *(FRAME-1)\n"
+      <>  "    @R5\n"
+      <>  "    A=M-1\n"
+      <>  "    D=M\n"
+      <>  "    @THAT\n"
+      <>  "    M=D\n"
+
+      <>  "       //ret: THIS = *(FRAME-2)\n"
+      <>  "    @2\n"
+      <>  "    D=A\n"
+      <>  "    @R5\n"
+      <>  "    A=M-D\n"
+      <>  "    D=M\n"
+      <>  "    @THIS\n"
+      <>  "    M=D\n"
+
+      <>  "       //ret: ARG = *(FRAME-3)\n"
+      <>  "    @3\n"
+      <>  "    D=A\n"
+      <>  "    @R5\n"
+      <>  "    A=M-D\n"
+      <>  "    D=M\n"
+      <>  "    @ARG\n"
+      <>  "    M=D\n"
+
+      <>  "       //ret: LCL = *(FRAME-4)\n"
+      <>  "    @4\n"
+      <>  "    D=A\n"
+      <>  "    @R5\n"
+      <>  "    A=M-D\n"
+      <>  "    D=M\n"
+      <>  "    @LCL\n"
+      <>  "    M=D\n"
+
+      <>  "       //ret: goto RET\n"
+      <>  "    @R6\n"
+      <>  "    A=M\n"
+      <>  "    0;JMP\n")
+
 
 data VMLine =
     AL_VM ArithLogicCommand
