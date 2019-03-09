@@ -130,7 +130,7 @@ instance ToASMCode MemoryAccessCommand where
 
   toASM (MemCMD POP  STATIC   x) sts fileName =
     (sts, let xBs = toByteString' x <> "\n"
-              stcVar = fileName <> toByteString' x <> "\n" in
+              stcVar = fileName <> "." <> toByteString' x <> "\n" in
           "    //pop static " <> xBs
       <>  "    @SP\n"
       <>  "    M=M-1\n"
