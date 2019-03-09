@@ -450,8 +450,7 @@ data FunctionCommand =
 
 instance ToASMCode FunctionCommand where
   toASM (FUN label nVars) (LS e g l r funName h) fileName =
-    let updateFunName Outside = Inside label
-        nPush0 0 = ""
+    let nPush0 0 = ""
         nPush0 n =     "    @0\n"
                    <>  "    D=A\n"
                    <>  "    @SP\n"
@@ -460,78 +459,97 @@ instance ToASMCode FunctionCommand where
                    <>  "    @SP\n"
                    <>  "    M=M+1\n"
                    <>  nPush0 (n-1) in --todo improve algo: remove rep by creating internal rec fun.
-    (LS e g l r (updateFunName funName) h,
+    (LS e g l r (Inside label) h,
         "    //function " <> label <> " " <> toByteString' nVars <> "\n"
-    <>  "(" <> label <> ")\n"--todo add filename here?
+    <>  "(" <> label <> ")\n"
     <>  nPush0 nVars)
   
   toASM (CALL funToCall nArgs) (LS e g l r funName h) fileName =
     (LS e g l (r+1) funName h,
         let retAdd = "RETURN_LOCATION_$" <> toByteString' r in
         "    //call " <> funToCall <> " " <> toByteString' nArgs <> "\n"
+    <>  "        //push return-address\n"
     <>  "    @" <> retAdd <> "\n"
     <>  "    D=A\n"
     <>  "    @SP\n"
     <>  "    A=M\n"
     <>  "    M=D\n"
+    <>  "    @SP\n"
+    <>  "    M=M+1\n\n"
 
+    <>  "        //push LCL\n"
     <>  "    @LCL\n"
+    <>  "    D=M\n"
+    <>  "    @SP\n"
+    <>  "    A=M\n"
     <>  "    M=D\n"
     <>  "    @SP\n"
-    <>  "    AM=M+1\n"
-    <>  "    M=D\n"
+    <>  "    M=M+1\n\n"
 
+    <>  "        //push ARG\n"
     <>  "    @ARG\n"
+    <>  "    D=M\n"
+    <>  "    @SP\n"
+    <>  "    A=M\n"
     <>  "    M=D\n"
     <>  "    @SP\n"
-    <>  "    AM=M+1\n"
-    <>  "    M=D\n"
+    <>  "    M=M+1\n"
 
+    <>  "        //push THIS\n"
     <>  "    @THIS\n"
+    <>  "    D=M\n"
+    <>  "    @SP\n"
+    <>  "    A=M\n"
     <>  "    M=D\n"
     <>  "    @SP\n"
-    <>  "    AM=M+1\n"
-    <>  "    M=D\n"
+    <>  "    M=M+1\n\n"
 
+    <>  "        //push THAT\n"
     <>  "    @THAT\n"
+    <>  "    D=M\n"
+    <>  "    @SP\n"
+    <>  "    A=M\n"
     <>  "    M=D\n"
     <>  "    @SP\n"
-    <>  "    AM=M+1\n"
-    <>  "    M=D\n"
+    <>  "    M=M+1\n\n"
 
+    <>  "        //ARG = SP-n-5\n"
     <>  "    @SP\n"
-    <>  "    MD=M+1\n"
-    <>  "    @LCL\n"
-    <>  "    M=D\n"
-    
+    <>  "    D=M\n"
     <>  "    @" <> toByteString' nArgs <> "\n"
     <>  "    D=D-A\n"
     <>  "    @5\n"
     <>  "    D=D-A\n"
     <>  "    @ARG\n"
-    <>  "    M=D\n"
+    <>  "    M=D\n\n"
 
+    <>  "        //LCL = SP\n"
+    <>  "    @SP\n"
+    <>  "    D=M\n"
+    <>  "    @LCL\n"
+    <>  "    M=D\n\n"
+    
+    <>  "        //goto f\n"
     <>  "    @" <> funToCall <> "\n"
     <>  "    0;JMP\n"
     <>  "(" <> retAdd <> ")\n")
 
-  toASM RETURN (LS e g l r funName h) fileName =
-    let updateFunName (Inside _) = Outside in
-      (LS e g l r (updateFunName funName) h,
+  toASM RETURN sts fileName =
+      (sts,
           "    //return\n"
       <>  "       //ret: FRAME = LCL\n"
       <>  "    @LCL\n"
       <>  "    D=M\n"
-      <>  "    @R5\n"
+      <>  "    @R13\n"
       <>  "    M=D\n"
 
       <>  "       //ret: RET = *(FRAME-5)\n"
       <>  "    @5\n"
       <>  "    D=A\n"
-      <>  "    @R5\n"
+      <>  "    @R13\n"
       <>  "    A=M-D\n"
       <>  "    D=M\n"
-      <>  "    @R6\n"
+      <>  "    @R14\n"
       <>  "    M=D\n"
 
       <>  "       //ret: *ARG = pop()\n"
@@ -550,7 +568,7 @@ instance ToASMCode FunctionCommand where
       <>  "    M=D\n"
 
       <>  "       //ret: THAT = *(FRAME-1)\n"
-      <>  "    @R5\n"
+      <>  "    @R13\n"
       <>  "    A=M-1\n"
       <>  "    D=M\n"
       <>  "    @THAT\n"
@@ -559,7 +577,7 @@ instance ToASMCode FunctionCommand where
       <>  "       //ret: THIS = *(FRAME-2)\n"
       <>  "    @2\n"
       <>  "    D=A\n"
-      <>  "    @R5\n"
+      <>  "    @R13\n"
       <>  "    A=M-D\n"
       <>  "    D=M\n"
       <>  "    @THIS\n"
@@ -568,7 +586,7 @@ instance ToASMCode FunctionCommand where
       <>  "       //ret: ARG = *(FRAME-3)\n"
       <>  "    @3\n"
       <>  "    D=A\n"
-      <>  "    @R5\n"
+      <>  "    @R13\n"
       <>  "    A=M-D\n"
       <>  "    D=M\n"
       <>  "    @ARG\n"
@@ -577,14 +595,14 @@ instance ToASMCode FunctionCommand where
       <>  "       //ret: LCL = *(FRAME-4)\n"
       <>  "    @4\n"
       <>  "    D=A\n"
-      <>  "    @R5\n"
+      <>  "    @R13\n"
       <>  "    A=M-D\n"
       <>  "    D=M\n"
       <>  "    @LCL\n"
       <>  "    M=D\n"
 
       <>  "       //ret: goto RET\n"
-      <>  "    @R6\n"
+      <>  "    @R14\n"
       <>  "    A=M\n"
       <>  "    0;JMP\n")
 
